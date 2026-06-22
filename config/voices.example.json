@@ -1,0 +1,10 @@
+[
+  {
+    "id": "example_voice",
+    "display_name": "Example Voice",
+    "voicebox_profile_id": "replace_with_voicebox_profile_id",
+    "language": "zh",
+    "engine": "kokoro",
+    "linked_skill_id": "example_character"
+  }
+]
