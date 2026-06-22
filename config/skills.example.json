@@ -1,0 +1,9 @@
+[
+  {
+    "id": "example_character",
+    "name": "Example Character",
+    "description": "Example character skill for testing.",
+    "skill_path": "skills/example_character",
+    "avatar": "/avatars/example_character.png"
+  }
+]
