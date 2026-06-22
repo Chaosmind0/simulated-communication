@@ -1,0 +1,42 @@
+{
+  "character": "特蕾西娅",
+  "slug": "te-lei-xi-ya",
+  "source_url": "https://prts.wiki/w/%E7%89%B9%E8%95%BE%E8%A5%BF%E5%A8%85",
+  "page_type": "enemy",
+  "timeline": [
+    {
+      "id": "early",
+      "label": "早期",
+      "range": "893-1072",
+      "summary": "成长与加冕"
+    },
+    {
+      "id": "babel",
+      "label": "巴别塔时期",
+      "range": "1072-1094",
+      "summary": "巴别塔创建与内战"
+    },
+    {
+      "id": "resurrected",
+      "label": "复活后",
+      "range": "1094后",
+      "summary": "被赦罪师复活"
+    }
+  ],
+  "annotated_lines": [],
+  "annotated_relations": [],
+  "inference_report": {
+    "total_lines": 0,
+    "phase_distribution": {},
+    "source_distribution": {},
+    "confidence_distribution": {},
+    "unknown_pct": 0,
+    "suggestions": []
+  },
+  "stats": {
+    "total_lines": 0,
+    "source_distribution": {},
+    "phase_distribution": {},
+    "situation_distribution": {}
+  }
+}

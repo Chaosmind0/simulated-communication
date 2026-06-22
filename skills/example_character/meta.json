@@ -1,0 +1,24 @@
+{
+  "name": "特蕾西娅",
+  "name_en": "",
+  "slug": "te-lei-xi-ya",
+  "created_at": "2026-06-18T11:47:20.403614",
+  "updated_at": "2026-06-18T11:47:20.403614",
+  "version": "v1.0",
+  "profile": {
+    "game": "明日方舟",
+    "faction": "unknown",
+    "identity": "unknown",
+    "mbti": "unknown",
+    "key_relationships": []
+  },
+  "tags": {
+    "personality": [],
+    "leadership": [],
+    "philosophy": []
+  },
+  "impression": "",
+  "knowledge_sources": [],
+  "corrections_count": 0,
+  "backup_at": "2026-06-18T11:48:02.347603"
+}
