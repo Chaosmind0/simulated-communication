@@ -35,7 +35,6 @@ outputs/
 # Voice samples and models
 voice_samples/
 voice_models/
-models/
 checkpoints/
 
 # Logs
