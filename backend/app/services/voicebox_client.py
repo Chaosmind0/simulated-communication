@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Optional
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -14,3 +15,13 @@ def load_voices_config():
 
     with VOICES_CONFIG_PATH.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def find_voice(voice_id: str) -> Optional[dict]:
+    voices = load_voices_config()
+
+    for voice in voices:
+        if voice["id"] == voice_id:
+            return voice
+
+    return None
