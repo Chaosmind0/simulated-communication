@@ -1,21 +1,27 @@
+import type { ChatRequest, ChatResponse, Skill, Voice } from "../types/chat";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
 
-export async function getSkills() {
+async function readJson<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const details = await res.text();
+    throw new Error(details || `Request failed with status ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+export async function getSkills(): Promise<Skill[]> {
   const res = await fetch(`${API_BASE_URL}/skills`);
-  return res.json();
+  return readJson<Skill[]>(res);
 }
 
-export async function getVoices() {
+export async function getVoices(): Promise<Voice[]> {
   const res = await fetch(`${API_BASE_URL}/voices`);
-  return res.json();
+  return readJson<Voice[]>(res);
 }
 
-export async function sendChatMessage(payload: {
-  session_id: string;
-  skill_id: string;
-  voice_id?: string;
-  message: string;
-}) {
+export async function sendChatMessage(payload: ChatRequest): Promise<ChatResponse> {
   const res = await fetch(`${API_BASE_URL}/chat`, {
     method: "POST",
     headers: {
@@ -24,5 +30,5 @@ export async function sendChatMessage(payload: {
     body: JSON.stringify(payload),
   });
 
-  return res.json();
+  return readJson<ChatResponse>(res);
 }
