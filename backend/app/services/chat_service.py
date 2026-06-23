@@ -1,11 +1,61 @@
 from fastapi import HTTPException, status
 
+from app.core.config import (
+    CHAT_MODE_MOCK,
+    CHAT_MODE_OPENAI,
+    SUPPORTED_CHAT_MODES,
+    SUPPORTED_VOICE_MODES,
+    VOICE_MODE_MOCK,
+    VOICE_MODE_VOICEBOX,
+    get_runtime_settings,
+)
 from app.models.schemas import ChatRequest, ChatResponse
+from app.services.llm_client import generate_reply
 from app.services.skill_loader import find_skill, load_skill_prompt
-from app.services.voicebox_client import find_voice, generate_mock_speech
+from app.services.voicebox_client import find_voice, generate_mock_speech, generate_voicebox_speech
+
+
+MOCK_REPLY_TEXT = (
+    "……我在。你的话，我已经听见了。"
+    "现在这是一个测试回复，之后会由角色 Skill 和 LLM 生成真正的回答。"
+)
+
+
+async def _generate_reply_text(chat_mode: str, skill_prompt: str, user_message: str) -> str:
+    if chat_mode == CHAT_MODE_MOCK:
+        return MOCK_REPLY_TEXT
+
+    if chat_mode == CHAT_MODE_OPENAI:
+        return await generate_reply(skill_prompt, user_message)
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported CHAT_MODE: {chat_mode}. Supported values: {sorted(SUPPORTED_CHAT_MODES)}",
+    )
+
+
+async def _generate_audio_url(voice_mode: str, reply_text: str, voice_id: str | None) -> str | None:
+    if voice_mode == VOICE_MODE_MOCK:
+        return await generate_mock_speech(reply_text, voice_id)
+
+    if voice_mode == VOICE_MODE_VOICEBOX:
+        try:
+            return await generate_voicebox_speech(reply_text, voice_id)
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=str(exc),
+            ) from exc
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported VOICE_MODE: {voice_mode}. Supported values: {sorted(SUPPORTED_VOICE_MODES)}",
+    )
 
 
 async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
+    settings = get_runtime_settings()
+
     try:
         selected_skill = find_skill(request.skill_id)
     except ValueError as exc:
@@ -20,17 +70,9 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
             detail=f"Voice not found: {request.voice_id}",
         )
 
-    # Mock mode: load the selected Skill prompt only to validate local configuration.
-    # Do not call the LLM service during the testing stage.
-    load_skill_prompt(selected_skill["id"])
-
-    reply_text = (
-        "……我在。你的话，我已经听见了。"
-        "现在这是一个测试回复，之后会由角色 Skill 和 LLM 生成真正的回答。"
-    )
-
-    # Mock voice generation keeps the future pipeline shape without calling Voicebox.
-    audio_url = await generate_mock_speech(reply_text, request.voice_id)
+    skill_prompt = load_skill_prompt(selected_skill["id"])
+    reply_text = await _generate_reply_text(settings.chat_mode, skill_prompt, request.message)
+    audio_url = await _generate_audio_url(settings.voice_mode, reply_text, request.voice_id)
 
     return ChatResponse(
         reply_text=reply_text,

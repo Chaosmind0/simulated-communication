@@ -8,7 +8,8 @@ A web-based testing-stage demo for simulated character communication. The curren
 - The frontend loads Voices from `GET http://127.0.0.1:8000/api/voices`.
 - The frontend sends chat text to `POST http://127.0.0.1:8000/api/chat`.
 - The backend validates the selected `skill_id` and `voice_id`, then returns a mock assistant reply.
-- Voice generation is mock-only; the backend intentionally returns `audio_url: null`, so the frontend does not show audio controls.
+- Default runtime mode is fully mock-based: `CHAT_MODE=mock` and `VOICE_MODE=mock`.
+- Voice generation is mock-only by default; the backend intentionally returns `audio_url: null`, so the frontend does not show audio controls.
 - OpenAI and Voicebox are intentionally **not required** in this stage.
 - No database, authentication, Unity, or Live2D integration is included yet.
 
@@ -20,6 +21,34 @@ backend/       FastAPI backend with mock chat endpoint
 skills/        Example character Skill data
 config/        Skill and voice configuration files and examples
 ```
+
+
+## Runtime modes
+
+Runtime behavior is controlled by environment variables. Defaults are safe for local testing:
+
+```bash
+CHAT_MODE=mock
+VOICE_MODE=mock
+```
+
+`CHAT_MODE` values:
+
+- `mock` (default): returns the fixed testing-stage assistant reply and does not require `OPENAI_API_KEY`.
+- `openai`: reserved for intentional real LLM testing; calls `llm_client.generate_reply()` with the loaded Skill prompt and requires `OPENAI_API_KEY`.
+
+`VOICE_MODE` values:
+
+- `mock` (default): calls `generate_mock_speech()` and returns `audio_url: null`. Voicebox is not required.
+- `voicebox`: reserved for future Voicebox integration and currently returns a clear not-implemented error instead of calling a real service.
+
+Copy `.env.example` if you want a local environment file, but do not commit real secrets:
+
+```bash
+cp .env.example .env
+```
+
+The project does not load `.env` automatically yet; export variables in your shell or use your process manager when testing non-default modes.
 
 ## Backend setup and run
 
@@ -73,11 +102,12 @@ npm run build
 
 ## Mock mode and error handling
 
-- `/api/chat` stays in mock mode for the testing stage.
-- The mock chat flow does not call `llm_client.generate_reply()`.
-- The mock chat flow calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service.
+- `/api/chat` stays in mock mode by default for the testing stage.
+- `CHAT_MODE=mock` does not call `llm_client.generate_reply()` and does not require `OPENAI_API_KEY`.
+- `CHAT_MODE=openai` is opt-in and calls `llm_client.generate_reply()` with the loaded Skill prompt.
+- `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service.
+- `VOICE_MODE=voicebox` is a guarded future integration path and currently returns a clear not-implemented error instead of making network calls.
 - `audio_url` may be `null` during testing; this is expected and the frontend handles it by hiding audio controls.
-- Real Voicebox integration is planned for a later stage after an explicit runtime mode is added.
 - Invalid `skill_id` values return a clear `404` HTTP error.
 - Invalid `voice_id` values return a clear `404` HTTP error.
 - `backend/app/services/llm_client.py` remains in the repository for future real LLM integration, but it is not used by the current mock chat path.
@@ -107,7 +137,7 @@ Current limitations:
 
 Recommended next steps after the testing stage:
 
-1. Add an explicit runtime mode flag before enabling real LLM or Voicebox calls.
-2. Connect `llm_client.generate_reply()` only when real model mode is intentionally enabled and `OPENAI_API_KEY` is configured.
-3. Add a real speech generation path only when Voicebox is available.
-4. Add automated backend and frontend tests for the mock flow.
+1. Implement the guarded `VOICE_MODE=voicebox` path only when Voicebox is available.
+2. Use `CHAT_MODE=openai` only for intentional real model testing with `OPENAI_API_KEY` configured.
+3. Add a real speech generation path only when Voicebox is available and explicitly enabled.
+4. Add automated backend and frontend tests for the mock and mode-switching flows.
