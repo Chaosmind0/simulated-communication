@@ -35,7 +35,7 @@ VOICE_MODE=mock
 `CHAT_MODE` values:
 
 - `mock` (default): returns the fixed testing-stage assistant reply and does not require `OPENAI_API_KEY`.
-- `openai`: reserved for intentional real LLM testing; calls `llm_client.generate_reply()` with the loaded Skill prompt and requires `OPENAI_API_KEY`.
+- `openai`: opt-in real text mode; calls `llm_client.generate_reply()` with the loaded Skill prompt as the system prompt and requires `OPENAI_API_KEY`.
 
 `VOICE_MODE` values:
 
@@ -67,6 +67,22 @@ The backend runs at:
 - Voices: `http://127.0.0.1:8000/api/voices`
 
 If `config/skills.json` or `config/voices.json` is missing, the backend falls back to `config/skills.example.json` and `config/voices.example.json`.
+
+
+## OpenAI text mode (optional)
+
+Default local development should stay in mock mode. To intentionally test real model-generated text replies, keep voice output mocked and start the backend with OpenAI mode enabled:
+
+```bash
+export CHAT_MODE=openai
+export VOICE_MODE=mock
+export OPENAI_API_KEY=replace_with_your_key
+export OPENAI_MODEL=gpt-4o-mini
+cd backend
+uvicorn app.main:app --reload --port 8000
+```
+
+In this mode, `/api/chat` loads the selected Skill prompt with `load_skill_prompt()` and passes it as the system prompt to the OpenAI-compatible chat client. If `OPENAI_API_KEY` is missing, the endpoint returns a clear error instead of crashing. Voicebox should remain disabled with `VOICE_MODE=mock`; real Voicebox integration is reserved for a later stage.
 
 ## Frontend setup and run
 
@@ -104,7 +120,7 @@ npm run build
 
 - `/api/chat` stays in mock mode by default for the testing stage.
 - `CHAT_MODE=mock` does not call `llm_client.generate_reply()` and does not require `OPENAI_API_KEY`.
-- `CHAT_MODE=openai` is opt-in and calls `llm_client.generate_reply()` with the loaded Skill prompt.
+- `CHAT_MODE=openai` is opt-in and calls `llm_client.generate_reply()` with the loaded Skill prompt as the system prompt. Missing API keys, provider failures, and empty model responses are returned as clear HTTP errors.
 - `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service.
 - `VOICE_MODE=voicebox` is a guarded future integration path and currently returns a clear not-implemented error instead of making network calls.
 - `audio_url` may be `null` during testing; this is expected and the frontend handles it by hiding audio controls.
@@ -138,6 +154,6 @@ Current limitations:
 Recommended next steps after the testing stage:
 
 1. Implement the guarded `VOICE_MODE=voicebox` path only when Voicebox is available.
-2. Use `CHAT_MODE=openai` only for intentional real model testing with `OPENAI_API_KEY` configured.
+2. Use `CHAT_MODE=openai` only for intentional real text testing with `OPENAI_API_KEY` configured, while keeping `VOICE_MODE=mock` until Voicebox is implemented.
 3. Add a real speech generation path only when Voicebox is available and explicitly enabled.
 4. Add automated backend and frontend tests for the mock and mode-switching flows.

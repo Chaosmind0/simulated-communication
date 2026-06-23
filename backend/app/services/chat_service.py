@@ -10,7 +10,12 @@ from app.core.config import (
     get_runtime_settings,
 )
 from app.models.schemas import ChatRequest, ChatResponse
-from app.services.llm_client import generate_reply
+from app.services.llm_client import (
+    LLMConfigurationError,
+    LLMEmptyResponseError,
+    LLMProviderError,
+    generate_reply,
+)
 from app.services.skill_loader import find_skill, load_skill_prompt
 from app.services.voicebox_client import find_voice, generate_mock_speech, generate_voicebox_speech
 
@@ -26,7 +31,23 @@ async def _generate_reply_text(chat_mode: str, skill_prompt: str, user_message: 
         return MOCK_REPLY_TEXT
 
     if chat_mode == CHAT_MODE_OPENAI:
-        return await generate_reply(skill_prompt, user_message)
+        try:
+            return await generate_reply(skill_prompt, user_message)
+        except LLMConfigurationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+        except LLMEmptyResponseError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=str(exc),
+            ) from exc
+        except LLMProviderError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=str(exc),
+            ) from exc
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
