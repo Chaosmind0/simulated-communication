@@ -27,7 +27,14 @@ from app.services.llm_client import (
 )
 from app.services.memory_service import format_memories_for_prompt, get_relevant_memories, maybe_store_memory
 from app.services.skill_loader import find_skill, load_skill_prompt
-from app.services.voicebox_client import find_voice, generate_mock_speech, generate_voicebox_speech
+from app.services.voicebox_client import (
+    VoiceboxConfigurationError,
+    VoiceboxEmptyAudioError,
+    VoiceboxProviderError,
+    find_voice,
+    generate_mock_speech,
+    generate_voicebox_speech,
+)
 
 
 MOCK_REPLY_TEXT = (
@@ -83,9 +90,19 @@ async def _generate_audio_url(voice_mode: str, reply_text: str, voice_id: str | 
     if voice_mode == VOICE_MODE_VOICEBOX:
         try:
             return await generate_voicebox_speech(reply_text, voice_id)
-        except RuntimeError as exc:
+        except VoiceboxConfigurationError as exc:
             raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+        except VoiceboxEmptyAudioError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=str(exc),
+            ) from exc
+        except VoiceboxProviderError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=str(exc),
             ) from exc
 
@@ -127,31 +144,6 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
 
     append_exchange(request.session_id, request.message, reply_text)
     maybe_store_memory(request.session_id, request.skill_id, request.message)
-
-
-async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
-    settings = get_runtime_settings()
-
-    try:
-        selected_skill = find_skill(request.skill_id)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Skill not found: {request.skill_id}",
-        ) from exc
-
-    if request.voice_id and find_voice(request.voice_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Voice not found: {request.voice_id}",
-        )
-
-    skill_prompt = load_skill_prompt(selected_skill["id"])
-    history_messages = get_recent_messages(request.session_id)
-    reply_text = await _generate_reply_text(settings.chat_mode, skill_prompt, request.message, history_messages)
-    audio_url = await _generate_audio_url(settings.voice_mode, reply_text, request.voice_id)
-
-    append_exchange(request.session_id, request.message, reply_text)
 
     return ChatResponse(
         reply_text=reply_text,

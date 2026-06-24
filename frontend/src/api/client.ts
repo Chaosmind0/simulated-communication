@@ -2,6 +2,15 @@ import type { ChatRequest, ChatResponse, Skill, Voice } from "../types/chat";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
 
+export function resolveBackendUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  const apiBase = new URL(API_BASE_URL);
+  return `${apiBase.origin}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
 async function readJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const details = await res.text();
