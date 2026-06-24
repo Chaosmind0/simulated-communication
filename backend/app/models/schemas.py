@@ -32,10 +32,18 @@ class ChatResponse(BaseModel):
     emotion: str = "neutral"
     motion: str = "idle"
 
+
 class ChatResetRequest(BaseModel):
     session_id: str
 
 
 class ChatResetResponse(BaseModel):
-    session_id: str
+    status: str = "ok"
     cleared: bool = True
+    session_id: str
+
+
+class ChatSessionStatusResponse(BaseModel):
+    session_id: str
+    message_count: int
+    max_history_messages: int

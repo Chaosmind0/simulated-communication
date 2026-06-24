@@ -17,6 +17,10 @@ def get_recent_messages(session_id: str) -> List[ConversationMessage]:
     return list(messages[-MAX_HISTORY_MESSAGES:])
 
 
+def get_message_count(session_id: str) -> int:
+    return len(_conversations.get(session_id, []))
+
+
 def append_exchange(session_id: str, user_message: str, assistant_reply: str) -> None:
     messages = _conversations.setdefault(session_id, [])
     messages.extend(

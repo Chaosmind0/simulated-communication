@@ -69,8 +69,29 @@ The backend runs at:
 
 If `config/skills.json` or `config/voices.json` is missing, the backend falls back to `config/skills.example.json` and `config/voices.example.json`.
 
-Conversation history is stored in memory per `session_id`. It is limited to the most recent 10 user/assistant messages and is cleared when the backend restarts. To clear one session manually, call `POST http://127.0.0.1:8000/api/chat/reset` with `{ "session_id": "..." }`.
+Conversation history is stored in memory per `session_id`. It is limited to the most recent 10 user/assistant messages and is cleared when the backend restarts. To clear one session manually, call `POST http://127.0.0.1:8000/api/chat/reset` with `{ "session_id": "..." }`; the response includes `status: "ok"` and `cleared: true`. To inspect one session without exposing message text, call `GET http://127.0.0.1:8000/api/chat/session/{session_id}` for `session_id`, `message_count`, and `max_history_messages`.
 
+
+
+## Conversation diagnostics
+
+Conversation history is in-memory only and is intended for development testing. It is keyed by `session_id`, capped at the latest 10 user/assistant messages, and is not persisted across backend restarts.
+
+Reset one session:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/chat/reset \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"your-session-id"}'
+```
+
+Inspect one session without returning full message content:
+
+```bash
+curl http://127.0.0.1:8000/api/chat/session/your-session-id
+```
+
+The diagnostics response includes `session_id`, `message_count`, and `max_history_messages` only.
 
 ## OpenAI text mode (optional)
 
