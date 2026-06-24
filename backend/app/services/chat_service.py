@@ -25,6 +25,7 @@ from app.services.llm_client import (
     generate_local_reply,
     generate_reply,
 )
+from app.services.memory_service import format_memories_for_prompt, get_relevant_memories, maybe_store_memory
 from app.services.skill_loader import find_skill, load_skill_prompt
 from app.services.voicebox_client import find_voice, generate_mock_speech, generate_voicebox_speech
 
@@ -112,6 +113,12 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
         )
 
     skill_prompt = load_skill_prompt(selected_skill["id"])
+    if settings.chat_mode != CHAT_MODE_MOCK:
+        relevant_memories = get_relevant_memories(request.session_id, request.skill_id, request.message)
+        memory_prompt = format_memories_for_prompt(relevant_memories)
+        if memory_prompt:
+            skill_prompt = f"{skill_prompt}\n\n{memory_prompt}"
+
     history_messages = get_recent_messages(request.session_id)
     reply_text = await _generate_reply_text(
         settings.chat_mode, skill_prompt, request.message, history_messages
@@ -119,45 +126,7 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
     audio_url = await _generate_audio_url(settings.voice_mode, reply_text, request.voice_id)
 
     append_exchange(request.session_id, request.message, reply_text)
-
-
-async def _generate_provider_reply(provider, skill_prompt: str, user_message: str, history_messages: list[dict]) -> str:
-    try:
-        return await provider(skill_prompt, user_message, history_messages)
-    except LLMConfigurationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-    except LLMEmptyResponseError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
-        ) from exc
-    except LLMProviderError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
-        ) from exc
-
-
-async def _generate_audio_url(voice_mode: str, reply_text: str, voice_id: str | None) -> str | None:
-    if voice_mode == VOICE_MODE_MOCK:
-        return await generate_mock_speech(reply_text, voice_id)
-
-    if voice_mode == VOICE_MODE_VOICEBOX:
-        try:
-            return await generate_voicebox_speech(reply_text, voice_id)
-        except RuntimeError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail=str(exc),
-            ) from exc
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Unsupported VOICE_MODE: {voice_mode}. Supported values: {sorted(SUPPORTED_VOICE_MODES)}",
-    )
+    maybe_store_memory(request.session_id, request.skill_id, request.message)
 
 
 async def generate_chat_reply(request: ChatRequest) -> ChatResponse:

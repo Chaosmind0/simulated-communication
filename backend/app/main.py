@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import skills, voices, chat
+from app.routers import skills, voices, chat, memory
 
 app = FastAPI(title="Simulated Communication API")
 
@@ -20,3 +20,4 @@ def health_check():
 app.include_router(skills.router, prefix="/api")
 app.include_router(voices.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(memory.router, prefix="/api")

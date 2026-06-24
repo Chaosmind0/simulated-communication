@@ -93,6 +93,51 @@ curl http://127.0.0.1:8000/api/chat/session/your-session-id
 
 The diagnostics response includes `session_id`, `message_count`, and `max_history_messages` only.
 
+## Long-term memory
+
+Long-term memory is also in-memory only during the testing stage. It is separate from short-term conversation history:
+
+- Short-term history stores recent user/assistant turns for a `session_id` and is sent as chat history.
+- Long-term memory stores small extracted facts, not raw transcripts, and is retrieved separately under a `Relevant long-term memory` system section for `CHAT_MODE=openai` and `CHAT_MODE=local`.
+
+Memory categories:
+
+- `user_profile`: stable facts such as user name or preferred nickname.
+- `user_preference`: stable preferences or repeatedly stated interests.
+- `relationship`: relationship state between a user/session and a character; scoped to the current `skill_id`.
+- `world_or_project_context`: stable project, story, world, or repo context.
+- `temporary_note`: explicitly remembered low-scope notes.
+
+Memory confidence:
+
+- `high`: explicitly stated stable facts, such as “remember that ...” or “my name is ...”.
+- `medium`: likely useful inferred facts, such as preferences or project context.
+- `low`: reserved for uncertain notes; low-confidence memories are not retrieved for normal chat.
+
+The extractor should store stable names, nicknames, preferences, important project facts, and relationship-relevant facts. It should not store one-time random numbers unless explicitly important, temporary test content, secrets, passwords, API keys, tokens, private keys, sensitive personal data by default, or large raw transcripts.
+
+Memory retrieval is scoped and limited. Normal chat retrieves only high/medium confidence memories for the current `session_id`, includes relationship memories only for the matching `skill_id`, and limits prompt injection to the top 5 relevant memories.
+
+Development memory endpoints:
+
+```bash
+# List memories for a session, optionally filtered by skill_id
+curl 'http://127.0.0.1:8000/api/memory?session_id=your-session-id'
+
+# Disable a memory without deleting it
+curl -X POST http://127.0.0.1:8000/api/memory/<memory-id>/disable
+
+# Delete a memory by id
+curl -X DELETE http://127.0.0.1:8000/api/memory/<memory-id>
+
+# Clear memories for a session, optionally with a skill_id
+curl -X POST http://127.0.0.1:8000/api/memory/clear \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"your-session-id"}'
+```
+
+Long-term memory is not persisted to a database and is cleared by backend restart. These endpoints are development tools only and should be revisited before adding authentication or production persistence.
+
 ## OpenAI text mode (optional)
 
 Default local development should stay in mock mode. To intentionally test real model-generated text replies, keep voice output mocked and start the backend with OpenAI mode enabled:
@@ -191,7 +236,7 @@ Current limitations:
 - Assistant replies are fixed mock text unless `CHAT_MODE=openai` or `CHAT_MODE=local` is explicitly enabled.
 - Speech generation is not implemented.
 - `audio_url` is always `null` in mock mode.
-- Backend conversation history is in-memory only, grouped by `session_id`, and disappears on backend restart or `POST /api/chat/reset`.
+- Backend conversation history and long-term memory are in-memory only, grouped by `session_id`, and disappear on backend restart or the relevant reset/clear endpoint.
 - There is no authentication or database persistence.
 
 Recommended next steps after the testing stage:
