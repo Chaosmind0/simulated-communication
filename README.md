@@ -7,7 +7,7 @@ A web-based testing-stage demo for simulated character communication. The curren
 - The frontend loads Skills from `GET http://127.0.0.1:8000/api/skills`.
 - The frontend loads Voices from `GET http://127.0.0.1:8000/api/voices`.
 - The frontend sends chat text to `POST http://127.0.0.1:8000/api/chat`.
-- The backend validates the selected `skill_id` and `voice_id`, then returns a mock assistant reply.
+- The backend validates the selected `skill_id` and `voice_id`, groups chat by `session_id`, and returns a mock assistant reply by default.
 - Default runtime mode is fully mock-based: `CHAT_MODE=mock` and `VOICE_MODE=mock`.
 - Voice generation is mock-only by default; the backend intentionally returns `audio_url: null`, so the frontend does not show audio controls.
 - OpenAI and Voicebox are intentionally **not required** in this stage.
@@ -69,6 +69,8 @@ The backend runs at:
 
 If `config/skills.json` or `config/voices.json` is missing, the backend falls back to `config/skills.example.json` and `config/voices.example.json`.
 
+Conversation history is stored in memory per `session_id`. It is limited to the most recent 10 user/assistant messages and is cleared when the backend restarts. To clear one session manually, call `POST http://127.0.0.1:8000/api/chat/reset` with `{ "session_id": "..." }`.
+
 
 ## OpenAI text mode (optional)
 
@@ -100,7 +102,7 @@ cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-For LM Studio, start the local server in LM Studio, load a model, and set `LOCAL_LLM_MODEL` to the model identifier shown by the server. Ollama or llama.cpp can also be used if they expose an OpenAI-compatible `/v1` endpoint. If the local server is not running or the model name is missing, `/api/chat` returns a clear error instead of crashing.
+For LM Studio, start the local server in LM Studio, load a model, and set `LOCAL_LLM_MODEL` to the model identifier shown by the server. Ollama or llama.cpp can also be used if they expose an OpenAI-compatible `/v1` endpoint. In local mode, `/api/chat` sends the Skill prompt, recent session history, and the current user message to the local server. If the local server is not running or the model name is missing, `/api/chat` returns a clear error instead of crashing.
 
 ## Frontend setup and run
 
@@ -140,6 +142,7 @@ npm run build
 - `CHAT_MODE=mock` does not call `llm_client.generate_reply()` and does not require `OPENAI_API_KEY`.
 - `CHAT_MODE=openai` is opt-in and calls `llm_client.generate_reply()` with the loaded Skill prompt as the system prompt. Missing API keys, provider failures, and empty model responses are returned as clear HTTP errors.
 - `CHAT_MODE=local` is opt-in and calls an OpenAI-compatible local server using `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, and `LOCAL_LLM_API_KEY`. Local server failures and empty responses are returned as clear HTTP errors.
+- `CHAT_MODE=openai` and `CHAT_MODE=local` include recent in-memory session history after the system Skill prompt.
 - `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service.
 - `VOICE_MODE=voicebox` is a guarded future integration path and currently returns a clear not-implemented error instead of making network calls.
 - `audio_url` may be `null` during testing; this is expected and the frontend handles it by hiding audio controls.
@@ -167,7 +170,7 @@ Current limitations:
 - Assistant replies are fixed mock text unless `CHAT_MODE=openai` or `CHAT_MODE=local` is explicitly enabled.
 - Speech generation is not implemented.
 - `audio_url` is always `null` in mock mode.
-- Chat history is held only in frontend memory and disappears on refresh.
+- Backend conversation history is in-memory only, grouped by `session_id`, and disappears on backend restart or `POST /api/chat/reset`.
 - There is no authentication or database persistence.
 
 Recommended next steps after the testing stage:

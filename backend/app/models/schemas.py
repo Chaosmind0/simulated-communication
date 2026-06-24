@@ -31,3 +31,11 @@ class ChatResponse(BaseModel):
     audio_url: Optional[str] = None
     emotion: str = "neutral"
     motion: str = "idle"
+
+class ChatResetRequest(BaseModel):
+    session_id: str
+
+
+class ChatResetResponse(BaseModel):
+    session_id: str
+    cleared: bool = True

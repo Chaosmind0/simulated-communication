@@ -1,4 +1,5 @@
 import os
+from typing import List, Optional
 
 from openai import AsyncOpenAI
 
@@ -16,6 +17,8 @@ class LLMProviderError(RuntimeError):
 class LLMEmptyResponseError(RuntimeError):
     """Raised when the provider returns no usable assistant text."""
 
+class LLMConfigurationError(RuntimeError):
+    """Raised when an LLM mode is enabled without required settings."""
 
 def get_client() -> AsyncOpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
@@ -39,6 +42,14 @@ def get_local_client() -> AsyncOpenAI:
     )
 
 
+def _build_chat_messages(system_prompt: str, user_message: str, history_messages: Optional[List[dict]] = None):
+    messages = [{"role": "system", "content": system_prompt}]
+    if history_messages:
+        messages.extend(history_messages)
+    messages.append({"role": "user", "content": user_message})
+    return messages
+
+
 def _extract_reply_text(response, provider_name: str) -> str:
     if not response.choices:
         raise LLMEmptyResponseError(f"{provider_name} response did not include any choices.")
@@ -50,17 +61,14 @@ def _extract_reply_text(response, provider_name: str) -> str:
     return reply_text.strip()
 
 
-async def generate_reply(system_prompt: str, user_message: str) -> str:
+async def generate_reply(system_prompt: str, user_message: str, history_messages: Optional[List[dict]] = None) -> str:
     settings = get_runtime_settings()
     client = get_client()
 
     try:
         response = await client.chat.completions.create(
             model=settings.openai_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
+            messages=_build_chat_messages(system_prompt, user_message, history_messages),
             temperature=0.8,
         )
     except Exception as exc:
@@ -69,17 +77,16 @@ async def generate_reply(system_prompt: str, user_message: str) -> str:
     return _extract_reply_text(response, "OpenAI")
 
 
-async def generate_local_reply(system_prompt: str, user_message: str) -> str:
+async def generate_local_reply(
+    system_prompt: str, user_message: str, history_messages: Optional[List[dict]] = None
+) -> str:
     settings = get_runtime_settings()
     client = get_local_client()
 
     try:
         response = await client.chat.completions.create(
             model=settings.local_llm_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
+            messages=_build_chat_messages(system_prompt, user_message, history_messages),
             temperature=0.8,
         )
     except Exception as exc:

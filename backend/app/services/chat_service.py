@@ -11,6 +11,7 @@ from app.core.config import (
     get_runtime_settings,
 )
 from app.models.schemas import ChatRequest, ChatResponse
+from app.services.conversation_store import append_exchange, clear_session, get_recent_messages
 from app.services.llm_client import (
     LLMConfigurationError,
     LLMEmptyResponseError,
@@ -28,15 +29,15 @@ MOCK_REPLY_TEXT = (
 )
 
 
-async def _generate_reply_text(chat_mode: str, skill_prompt: str, user_message: str) -> str:
+async def _generate_reply_text(chat_mode: str, skill_prompt: str, user_message: str, history_messages: list[dict]) -> str:
     if chat_mode == CHAT_MODE_MOCK:
         return MOCK_REPLY_TEXT
 
     if chat_mode == CHAT_MODE_OPENAI:
-        return await _generate_provider_reply(generate_reply, skill_prompt, user_message)
+        return await _generate_provider_reply(generate_reply, skill_prompt, user_message, history_messages)
 
     if chat_mode == CHAT_MODE_LOCAL:
-        return await _generate_provider_reply(generate_local_reply, skill_prompt, user_message)
+        return await _generate_provider_reply(generate_local_reply, skill_prompt, user_message, history_messages)
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -44,9 +45,9 @@ async def _generate_reply_text(chat_mode: str, skill_prompt: str, user_message: 
     )
 
 
-async def _generate_provider_reply(provider, skill_prompt: str, user_message: str) -> str:
+async def _generate_provider_reply(provider, skill_prompt: str, user_message: str, history_messages: list[dict]) -> str:
     try:
-        return await provider(skill_prompt, user_message)
+        return await provider(skill_prompt, user_message, history_messages)
     except LLMConfigurationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -101,8 +102,11 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
         )
 
     skill_prompt = load_skill_prompt(selected_skill["id"])
-    reply_text = await _generate_reply_text(settings.chat_mode, skill_prompt, request.message)
+    history_messages = get_recent_messages(request.session_id)
+    reply_text = await _generate_reply_text(settings.chat_mode, skill_prompt, request.message, history_messages)
     audio_url = await _generate_audio_url(settings.voice_mode, reply_text, request.voice_id)
+
+    append_exchange(request.session_id, request.message, reply_text)
 
     return ChatResponse(
         reply_text=reply_text,
@@ -110,3 +114,7 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
         emotion="neutral",
         motion="idle",
     )
+
+
+def reset_chat_history(session_id: str) -> None:
+    clear_session(session_id)
