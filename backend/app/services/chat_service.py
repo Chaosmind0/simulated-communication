@@ -120,6 +120,70 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
 
     append_exchange(request.session_id, request.message, reply_text)
 
+
+async def _generate_provider_reply(provider, skill_prompt: str, user_message: str, history_messages: list[dict]) -> str:
+    try:
+        return await provider(skill_prompt, user_message, history_messages)
+    except LLMConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except LLMEmptyResponseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    except LLMProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+
+async def _generate_audio_url(voice_mode: str, reply_text: str, voice_id: str | None) -> str | None:
+    if voice_mode == VOICE_MODE_MOCK:
+        return await generate_mock_speech(reply_text, voice_id)
+
+    if voice_mode == VOICE_MODE_VOICEBOX:
+        try:
+            return await generate_voicebox_speech(reply_text, voice_id)
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=str(exc),
+            ) from exc
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported VOICE_MODE: {voice_mode}. Supported values: {sorted(SUPPORTED_VOICE_MODES)}",
+    )
+
+
+async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
+    settings = get_runtime_settings()
+
+    try:
+        selected_skill = find_skill(request.skill_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Skill not found: {request.skill_id}",
+        ) from exc
+
+    if request.voice_id and find_voice(request.voice_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Voice not found: {request.voice_id}",
+        )
+
+    skill_prompt = load_skill_prompt(selected_skill["id"])
+    history_messages = get_recent_messages(request.session_id)
+    reply_text = await _generate_reply_text(settings.chat_mode, skill_prompt, request.message, history_messages)
+    audio_url = await _generate_audio_url(settings.voice_mode, reply_text, request.voice_id)
+
+    append_exchange(request.session_id, request.message, reply_text)
+
     return ChatResponse(
         reply_text=reply_text,
         audio_url=audio_url,
