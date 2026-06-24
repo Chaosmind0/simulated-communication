@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 
 from app.core.config import (
+    CHAT_MODE_LOCAL,
     CHAT_MODE_MOCK,
     CHAT_MODE_OPENAI,
     SUPPORTED_CHAT_MODES,
@@ -14,6 +15,7 @@ from app.services.llm_client import (
     LLMConfigurationError,
     LLMEmptyResponseError,
     LLMProviderError,
+    generate_local_reply,
     generate_reply,
 )
 from app.services.skill_loader import find_skill, load_skill_prompt
@@ -31,28 +33,35 @@ async def _generate_reply_text(chat_mode: str, skill_prompt: str, user_message: 
         return MOCK_REPLY_TEXT
 
     if chat_mode == CHAT_MODE_OPENAI:
-        try:
-            return await generate_reply(skill_prompt, user_message)
-        except LLMConfigurationError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(exc),
-            ) from exc
-        except LLMEmptyResponseError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=str(exc),
-            ) from exc
-        except LLMProviderError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=str(exc),
-            ) from exc
+        return await _generate_provider_reply(generate_reply, skill_prompt, user_message)
+
+    if chat_mode == CHAT_MODE_LOCAL:
+        return await _generate_provider_reply(generate_local_reply, skill_prompt, user_message)
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=f"Unsupported CHAT_MODE: {chat_mode}. Supported values: {sorted(SUPPORTED_CHAT_MODES)}",
     )
+
+
+async def _generate_provider_reply(provider, skill_prompt: str, user_message: str) -> str:
+    try:
+        return await provider(skill_prompt, user_message)
+    except LLMConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except LLMEmptyResponseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    except LLMProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
 
 
 async def _generate_audio_url(voice_mode: str, reply_text: str, voice_id: str | None) -> str | None:

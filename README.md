@@ -34,8 +34,9 @@ VOICE_MODE=mock
 
 `CHAT_MODE` values:
 
-- `mock` (default): returns the fixed testing-stage assistant reply and does not require `OPENAI_API_KEY`.
+- `mock` (default): returns the fixed testing-stage assistant reply and does not require `OPENAI_API_KEY` or a local LLM server.
 - `openai`: opt-in real text mode; calls `llm_client.generate_reply()` with the loaded Skill prompt as the system prompt and requires `OPENAI_API_KEY`.
+- `local`: opt-in local text mode; calls an OpenAI-compatible local server, such as LM Studio or llama.cpp server, with the loaded Skill prompt as the system prompt and does not require OpenAI quota.
 
 `VOICE_MODE` values:
 
@@ -84,6 +85,23 @@ uvicorn app.main:app --reload --port 8000
 
 In this mode, `/api/chat` loads the selected Skill prompt with `load_skill_prompt()` and passes it as the system prompt to the OpenAI-compatible chat client. If `OPENAI_API_KEY` is missing, the endpoint returns a clear error instead of crashing. Voicebox should remain disabled with `VOICE_MODE=mock`; real Voicebox integration is reserved for a later stage.
 
+
+## Local LLM mode (optional)
+
+Use `CHAT_MODE=local` to call an OpenAI-compatible local server without using OpenAI billing or quota. Keep voice output mocked for now:
+
+```bash
+export CHAT_MODE=local
+export VOICE_MODE=mock
+export LOCAL_LLM_BASE_URL=http://127.0.0.1:1234/v1
+export LOCAL_LLM_MODEL=<the loaded model identifier>
+export LOCAL_LLM_API_KEY=not-needed
+cd backend
+uvicorn app.main:app --reload --port 8000
+```
+
+For LM Studio, start the local server in LM Studio, load a model, and set `LOCAL_LLM_MODEL` to the model identifier shown by the server. Ollama or llama.cpp can also be used if they expose an OpenAI-compatible `/v1` endpoint. If the local server is not running or the model name is missing, `/api/chat` returns a clear error instead of crashing.
+
 ## Frontend setup and run
 
 In a second terminal, from the repository root:
@@ -121,6 +139,7 @@ npm run build
 - `/api/chat` stays in mock mode by default for the testing stage.
 - `CHAT_MODE=mock` does not call `llm_client.generate_reply()` and does not require `OPENAI_API_KEY`.
 - `CHAT_MODE=openai` is opt-in and calls `llm_client.generate_reply()` with the loaded Skill prompt as the system prompt. Missing API keys, provider failures, and empty model responses are returned as clear HTTP errors.
+- `CHAT_MODE=local` is opt-in and calls an OpenAI-compatible local server using `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, and `LOCAL_LLM_API_KEY`. Local server failures and empty responses are returned as clear HTTP errors.
 - `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service.
 - `VOICE_MODE=voicebox` is a guarded future integration path and currently returns a clear not-implemented error instead of making network calls.
 - `audio_url` may be `null` during testing; this is expected and the frontend handles it by hiding audio controls.
@@ -145,7 +164,7 @@ cd frontend && npm run build
 
 Current limitations:
 
-- Assistant replies are fixed mock text.
+- Assistant replies are fixed mock text unless `CHAT_MODE=openai` or `CHAT_MODE=local` is explicitly enabled.
 - Speech generation is not implemented.
 - `audio_url` is always `null` in mock mode.
 - Chat history is held only in frontend memory and disappears on refresh.
@@ -154,6 +173,6 @@ Current limitations:
 Recommended next steps after the testing stage:
 
 1. Implement the guarded `VOICE_MODE=voicebox` path only when Voicebox is available.
-2. Use `CHAT_MODE=openai` only for intentional real text testing with `OPENAI_API_KEY` configured, while keeping `VOICE_MODE=mock` until Voicebox is implemented.
+2. Use `CHAT_MODE=openai` only for intentional real text testing with `OPENAI_API_KEY` configured, or `CHAT_MODE=local` with an OpenAI-compatible local server.
 3. Add a real speech generation path only when Voicebox is available and explicitly enabled.
 4. Add automated backend and frontend tests for the mock and mode-switching flows.
