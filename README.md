@@ -172,7 +172,7 @@ For LM Studio, start the local server in LM Studio, load a model, and set `LOCAL
 
 ## Voice and TTS roadmap
 
-The current MVP is text-only. `VOICE_MODE=mock` remains the only active voice behavior and `/api/chat` returns `audio_url: null`. The Voice Profile selector is kept as a future-facing placeholder so the UI shape does not need to change when TTS is revisited.
+The current MVP is text-only. `VOICE_MODE=mock` remains the only active voice behavior and `/api/chat` returns `audio_url: null`. The active Voice Profile selector has been removed from the UI; voice selection and playback are future TTS work.
 
 If `VOICE_MODE=voicebox` is set now, the backend returns a clear error explaining that Voicebox integration is deferred. It does not call Voicebox, does not use `/generate/stream`, and does not create audio files.
 
@@ -185,6 +185,31 @@ Future roadmap items:
 - Live2D voice and motion synchronization.
 
 `VOICEBOX_BASE_URL` may remain in `.env.example` as a future optional setting, but it is ignored while `VOICE_MODE=mock`.
+
+
+## Importing Character Skills
+
+The frontend includes an **Import Character Skill** button near the Character Skill selector. Choose a local folder containing at least these files:
+
+- `SKILL.md`
+- `persona.md`
+- `knowledge.md`
+
+The browser uploads the selected folder to `POST /api/skills/import` as multipart form data. The backend validates the folder, rejects unsafe paths or binary/oversized files, saves it under `skills/imported/<safe_skill_id>/`, and updates `config/skills.json` so it appears in `GET /api/skills`. If `config/skills.json` does not exist, it is created from the example Skill config plus the imported Skill.
+
+Imported Skill entries look like:
+
+```json
+{
+  "id": "safe_skill_id",
+  "name": "Display Name",
+  "description": "Imported character skill.",
+  "skill_path": "skills/imported/safe_skill_id",
+  "avatar": null
+}
+```
+
+Simple `name` and `description` front matter in `SKILL.md` is used when available; otherwise the display name is inferred from the folder name. Uploaded files are treated as text/data only and are never executed.
 
 ## Frontend setup and run
 
@@ -202,8 +227,8 @@ Open the frontend in a browser:
 
 Expected behavior:
 
-1. The page shows a Skill selector and a Voice selector.
-2. The first available Skill and Voice are selected by default.
+1. The page shows a Character Skill selector and an Import Character Skill button.
+2. The first available Skill is selected by default.
 3. Type a message in the chat input and press **Send**.
 4. The user message appears on the right.
 5. The backend mock assistant reply appears on the left.
@@ -225,9 +250,9 @@ npm run build
 - `CHAT_MODE=openai` is opt-in and calls `llm_client.generate_reply()` with the loaded Skill prompt as the system prompt. Missing API keys, provider failures, and empty model responses are returned as clear HTTP errors.
 - `CHAT_MODE=local` is opt-in and calls an OpenAI-compatible local server using `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, and `LOCAL_LLM_API_KEY`. Local server failures and empty responses are returned as clear HTTP errors.
 - `CHAT_MODE=openai` and `CHAT_MODE=local` include recent in-memory session history after the system Skill prompt.
-- `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service.
+- `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service. The active frontend Voice Profile selector is removed for the text-only MVP.
 - `VOICE_MODE=voicebox` is currently deferred and returns a clear error without making network calls.
-- `audio_url` may be `null` during testing; this is expected and the frontend handles it by hiding audio controls.
+- `audio_url` is expected to be `null` in the current text-only MVP, and the frontend does not render audio controls.
 - Invalid `skill_id` values return a clear `404` HTTP error.
 - Invalid `voice_id` values return a clear `404` HTTP error.
 - `backend/app/services/llm_client.py` remains in the repository for future real LLM integration, but it is not used by the current mock chat path.

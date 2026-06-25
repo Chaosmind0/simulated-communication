@@ -258,3 +258,40 @@ h1 {
     max-width: 78%;
   }
 }
+
+.skill-import-card button {
+  width: fit-content;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #1677ff;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.skill-import-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.import-helper {
+  margin: 6px 0 0;
+  color: #627d98;
+  font-size: 0.9rem;
+}
+
+.inline-error {
+  color: #991b1b;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

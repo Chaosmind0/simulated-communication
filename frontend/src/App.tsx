@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { getSkills, getVoices, sendChatMessage } from "./api/client";
+import { getSkills, importSkillFolder, sendChatMessage } from "./api/client";
 import { ChatInput } from "./components/ChatInput";
 import { ChatWindow } from "./components/ChatWindow";
+import { SkillImport } from "./components/SkillImport";
 import { SkillSelector } from "./components/SkillSelector";
-import { VoiceSelector } from "./components/VoiceSelector";
-import type { ChatMessage, Skill, Voice } from "./types/chat";
+import type { ChatMessage, Skill } from "./types/chat";
 
 function createMessageId() {
   return `${Date.now()}-${crypto.randomUUID()}`;
@@ -12,15 +12,27 @@ function createMessageId() {
 
 function App() {
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [voices, setVoices] = useState<Voice[]>([]);
   const [selectedSkillId, setSelectedSkillId] = useState("");
-  const [selectedVoiceId, setSelectedVoiceId] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sessionId = useMemo(() => crypto.randomUUID(), []);
+
+  async function refreshSkills(preferredSkillId?: string) {
+    const skillsData = await getSkills();
+    setSkills(skillsData);
+    setSelectedSkillId((currentSkillId) => {
+      if (preferredSkillId && skillsData.some((skill) => skill.id === preferredSkillId)) {
+        return preferredSkillId;
+      }
+      if (currentSkillId && skillsData.some((skill) => skill.id === currentSkillId)) {
+        return currentSkillId;
+      }
+      return skillsData[0]?.id ?? "";
+    });
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -29,19 +41,17 @@ function App() {
       try {
         setIsLoading(true);
         setError(null);
-        const [skillsData, voicesData] = await Promise.all([getSkills(), getVoices()]);
+        const skillsData = await getSkills();
 
         if (ignore) {
           return;
         }
 
         setSkills(skillsData);
-        setVoices(voicesData);
         setSelectedSkillId(skillsData[0]?.id ?? "");
-        setSelectedVoiceId(voicesData[0]?.id ?? "");
       } catch (err) {
         if (!ignore) {
-          setError(err instanceof Error ? err.message : "Failed to load chat options.");
+          setError(err instanceof Error ? err.message : "Failed to load character Skills.");
         }
       } finally {
         if (!ignore) {
@@ -56,6 +66,12 @@ function App() {
       ignore = true;
     };
   }, []);
+
+  async function handleImportSkill(files: File[]) {
+    setError(null);
+    const importedSkill = await importSkillFolder(files);
+    await refreshSkills(importedSkill.id);
+  }
 
   async function handleSend(messageText: string) {
     if (!selectedSkillId) {
@@ -77,7 +93,6 @@ function App() {
       const response = await sendChatMessage({
         session_id: sessionId,
         skill_id: selectedSkillId,
-        voice_id: selectedVoiceId || undefined,
         message: messageText,
       });
 
@@ -98,7 +113,7 @@ function App() {
     }
   }
 
-  const chatDisabled = isLoading || isSending || !selectedSkillId || !selectedVoiceId;
+  const chatDisabled = isLoading || isSending || !selectedSkillId;
 
   return (
     <main className="app-shell">
@@ -106,7 +121,7 @@ function App() {
         <div>
           <p className="eyebrow">Testing MVP</p>
           <h1>Simulated Character Communication</h1>
-          <p className="subtitle">QQ-style mock chat powered by the local FastAPI test endpoints.</p>
+          <p className="subtitle">QQ-style text chat powered by the local FastAPI endpoints.</p>
         </div>
       </header>
 
@@ -117,15 +132,10 @@ function App() {
           disabled={isLoading || isSending}
           onChange={setSelectedSkillId}
         />
-        <VoiceSelector
-          voices={voices}
-          selectedVoiceId={selectedVoiceId}
-          disabled={isLoading || isSending}
-          onChange={setSelectedVoiceId}
-        />
+        <SkillImport disabled={isLoading || isSending} onImport={handleImportSkill} />
       </section>
 
-      {isLoading ? <div className="status-banner">Loading Skills and Voices…</div> : null}
+      {isLoading ? <div className="status-banner">Loading character Skills…</div> : null}
       {error ? <div className="status-banner status-banner-error">{error}</div> : null}
 
       <section className="chat-card">

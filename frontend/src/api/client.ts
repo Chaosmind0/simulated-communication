@@ -41,3 +41,20 @@ export async function sendChatMessage(payload: ChatRequest): Promise<ChatRespons
 
   return readJson<ChatResponse>(res);
 }
+
+export async function importSkillFolder(files: File[], displayName?: string): Promise<Skill> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("files", file, file.webkitRelativePath || file.name);
+  }
+  if (displayName?.trim()) {
+    formData.append("display_name", displayName.trim());
+  }
+
+  const res = await fetch(`${API_BASE_URL}/skills/import`, {
+    method: "POST",
+    body: formData,
+  });
+
+  return readJson<Skill>(res);
+}
