@@ -53,6 +53,22 @@ class VoiceboxEmptyAudioError(RuntimeError):
     """Reserved for future Voicebox empty-audio responses."""
 
 
+class VoiceboxDeferredError(RuntimeError):
+    """Raised when a caller enables future Voicebox mode in the current text-only MVP."""
+
+
+class VoiceboxConfigurationError(RuntimeError):
+    """Reserved for future Voicebox configuration validation errors."""
+
+
+class VoiceboxProviderError(RuntimeError):
+    """Reserved for future Voicebox provider request errors."""
+
+
+class VoiceboxEmptyAudioError(RuntimeError):
+    """Reserved for future Voicebox empty-audio responses."""
+
+
 def load_voices_config():
     if not VOICES_CONFIG_PATH.exists():
         fallback_path = PROJECT_ROOT / "config" / "voices.example.json"

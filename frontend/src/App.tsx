@@ -13,12 +13,24 @@ function createMessageId() {
 function App() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [selectedSkillId, setSelectedSkillId] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messagesBySkillId, setMessagesBySkillId] = useState<Record<string, ChatMessage[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sessionId = useMemo(() => crypto.randomUUID(), []);
+  const baseSessionId = useMemo(() => crypto.randomUUID(), []);
+  const selectedMessages = selectedSkillId ? messagesBySkillId[selectedSkillId] ?? [] : [];
+
+  function getSkillSessionId(skillId: string) {
+    return `${baseSessionId}:${skillId}`;
+  }
+
+  function appendSkillMessage(skillId: string, message: ChatMessage) {
+    setMessagesBySkillId((currentMessagesBySkillId) => ({
+      ...currentMessagesBySkillId,
+      [skillId]: [...(currentMessagesBySkillId[skillId] ?? []), message],
+    }));
+  }
 
   async function refreshSkills(preferredSkillId?: string) {
     const skillsData = await getSkills();
@@ -85,13 +97,13 @@ function App() {
       text: messageText,
     };
 
-    setMessages((currentMessages) => [...currentMessages, userMessage]);
+    appendSkillMessage(selectedSkillId, userMessage);
     setIsSending(true);
     setError(null);
 
     try {
       const response = await sendChatMessage({
-        session_id: sessionId,
+        session_id: getSkillSessionId(selectedSkillId),
         skill_id: selectedSkillId,
         message: messageText,
       });
@@ -105,7 +117,7 @@ function App() {
         motion: response.motion,
       };
 
-      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
+      appendSkillMessage(selectedSkillId, assistantMessage);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message.");
     } finally {
@@ -139,7 +151,7 @@ function App() {
       {error ? <div className="status-banner status-banner-error">{error}</div> : null}
 
       <section className="chat-card">
-        <ChatWindow messages={messages} isSending={isSending} />
+        <ChatWindow messages={selectedMessages} isSending={isSending} />
         <ChatInput disabled={chatDisabled} onSend={handleSend} />
       </section>
     </main>

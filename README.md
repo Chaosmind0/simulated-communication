@@ -232,7 +232,8 @@ Expected behavior:
 3. Type a message in the chat input and press **Send**.
 4. The user message appears on the right.
 5. The backend mock assistant reply appears on the left.
-6. No OpenAI API key or Voicebox service is needed.
+6. Switching Character Skills shows that Skill's own frontend chat messages and uses a Skill-scoped backend session ID.
+7. No OpenAI API key or Voicebox service is needed.
 
 ## Frontend build check
 
@@ -249,7 +250,7 @@ npm run build
 - `CHAT_MODE=mock` does not call `llm_client.generate_reply()` and does not require `OPENAI_API_KEY`.
 - `CHAT_MODE=openai` is opt-in and calls `llm_client.generate_reply()` with the loaded Skill prompt as the system prompt. Missing API keys, provider failures, and empty model responses are returned as clear HTTP errors.
 - `CHAT_MODE=local` is opt-in and calls an OpenAI-compatible local server using `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, and `LOCAL_LLM_API_KEY`. Local server failures and empty responses are returned as clear HTTP errors.
-- `CHAT_MODE=openai` and `CHAT_MODE=local` include recent in-memory session history after the system Skill prompt.
+- `CHAT_MODE=openai` and `CHAT_MODE=local` include recent in-memory session history after the system Skill prompt. The frontend scopes browser session IDs by selected Skill so short-term context does not mix between characters.
 - `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service. The active frontend Voice Profile selector is removed for the text-only MVP.
 - `VOICE_MODE=voicebox` is currently deferred and returns a clear error without making network calls.
 - `audio_url` is expected to be `null` in the current text-only MVP, and the frontend does not render audio controls.

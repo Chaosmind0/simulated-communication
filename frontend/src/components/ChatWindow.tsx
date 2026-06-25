@@ -11,8 +11,8 @@ export function ChatWindow({ messages, isSending }: ChatWindowProps) {
     <section className="chat-window" aria-live="polite">
       {messages.length === 0 ? (
         <div className="empty-state">
-          <strong>Start a mock chat</strong>
-          <span>Select a Skill and Voice, then send a message.</span>
+          <strong>Start a character chat</strong>
+          <span>Select a Character Skill, then send a message.</span>
         </div>
       ) : (
         messages.map((message) => <MessageBubble key={message.id} message={message} />)
