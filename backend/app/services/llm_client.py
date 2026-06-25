@@ -17,6 +17,8 @@ class LLMProviderError(RuntimeError):
 class LLMEmptyResponseError(RuntimeError):
     """Raised when the provider returns no usable assistant text."""
 
+class LLMConfigurationError(RuntimeError):
+    """Raised when an LLM mode is enabled without required settings."""
 
 def get_client() -> AsyncOpenAI:
     api_key = os.getenv("OPENAI_API_KEY")

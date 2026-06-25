@@ -1,10 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from app.routers import skills, voices, chat, memory
 from app.services.database import init_database
 
 app = FastAPI(title="Simulated Communication API")
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+AUDIO_CACHE_DIR = PROJECT_ROOT / "audio_cache"
+AUDIO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
