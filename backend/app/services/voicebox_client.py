@@ -1,9 +1,26 @@
 import json
 from pathlib import Path
+from typing import Optional
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 VOICES_CONFIG_PATH = PROJECT_ROOT / "config" / "voices.json"
+
+
+class VoiceboxDeferredError(RuntimeError):
+    """Raised when a caller enables future Voicebox mode in the current text-only MVP."""
+
+
+class VoiceboxConfigurationError(RuntimeError):
+    """Reserved for future Voicebox configuration validation errors."""
+
+
+class VoiceboxProviderError(RuntimeError):
+    """Reserved for future Voicebox provider request errors."""
+
+
+class VoiceboxEmptyAudioError(RuntimeError):
+    """Reserved for future Voicebox empty-audio responses."""
 
 
 def load_voices_config():
@@ -14,3 +31,33 @@ def load_voices_config():
 
     with VOICES_CONFIG_PATH.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def find_voice(voice_id: str) -> Optional[dict]:
+    voices = load_voices_config()
+
+    for voice in voices:
+        if voice["id"] == voice_id:
+            return voice
+
+    return None
+
+
+async def generate_mock_speech(text: str, voice_id: Optional[str]) -> Optional[str]:
+    # Current MVP voice behavior: no speech generation and no audio controls.
+    # Keep the call shape so future TTS work can be wired in without changing
+    # chat_service or frontend message types.
+    _ = (text, voice_id)
+    return None
+
+
+async def generate_voicebox_speech(text: str, voice_id: Optional[str]) -> Optional[str]:
+    # Voicebox integration is deliberately deferred. Future work must handle
+    # preset vs. cloned profile compatibility, engine/language compatibility,
+    # audio cache retention, and /generate/stream error handling before enabling
+    # this path. Do not call the real Voicebox service in the current MVP.
+    _ = (text, voice_id)
+    raise VoiceboxDeferredError(
+        "VOICE_MODE=voicebox is deferred to a future version. "
+        "Use VOICE_MODE=mock for the current text-only MVP."
+    )

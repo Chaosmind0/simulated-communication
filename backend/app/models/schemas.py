@@ -8,6 +8,8 @@ class SkillInfo(BaseModel):
     description: str
     skill_path: str
     avatar: Optional[str] = None
+    ai_avatar_url: Optional[str] = None
+    user_avatar_url: Optional[str] = None
 
 
 class VoiceInfo(BaseModel):
@@ -31,3 +33,29 @@ class ChatResponse(BaseModel):
     audio_url: Optional[str] = None
     emotion: str = "neutral"
     motion: str = "idle"
+
+
+class ChatResetRequest(BaseModel):
+    session_id: str
+
+
+class ChatResetResponse(BaseModel):
+    status: str = "ok"
+    cleared: bool = True
+    session_id: str
+
+
+class ChatSessionStatusResponse(BaseModel):
+    session_id: str
+    message_count: int
+    max_history_messages: int
+
+
+class MemoryClearRequest(BaseModel):
+    session_id: str
+    skill_id: Optional[str] = None
+
+
+class MemoryActionResponse(BaseModel):
+    status: str = "ok"
+    affected_count: int = 0
