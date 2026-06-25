@@ -19,12 +19,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
+
 
 app.include_router(skills.router, prefix="/api")
 app.include_router(voices.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(memory.router, prefix="/api")
-app.mount("/audio", StaticFiles(directory=AUDIO_CACHE_DIR), name="audio")

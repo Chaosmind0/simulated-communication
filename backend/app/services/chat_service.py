@@ -29,6 +29,7 @@ from app.services.memory_service import format_memories_for_prompt, get_relevant
 from app.services.skill_loader import find_skill, load_skill_prompt
 from app.services.voicebox_client import (
     VoiceboxConfigurationError,
+    VoiceboxDeferredError,
     VoiceboxEmptyAudioError,
     VoiceboxProviderError,
     find_voice,
@@ -90,6 +91,11 @@ async def _generate_audio_url(voice_mode: str, reply_text: str, voice_id: str | 
     if voice_mode == VOICE_MODE_VOICEBOX:
         try:
             return await generate_voicebox_speech(reply_text, voice_id)
+        except VoiceboxDeferredError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=str(exc),
+            ) from exc
         except VoiceboxConfigurationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

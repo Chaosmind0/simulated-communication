@@ -41,7 +41,7 @@ VOICE_MODE=mock
 `VOICE_MODE` values:
 
 - `mock` (default): calls `generate_mock_speech()` and returns `audio_url: null`. Voicebox is not required.
-- `voicebox`: opt-in real Voicebox mode; calls `POST /generate/stream`, saves WAV bytes to `audio_cache/`, and returns `/audio/<filename>.wav`.
+- `voicebox`: reserved for a future TTS release; in the current MVP it returns a clear deferred-feature error and does not call Voicebox.
 
 Copy `.env.example` if you want a local environment file, but do not commit real secrets:
 
@@ -170,39 +170,21 @@ uvicorn app.main:app --reload --port 8000
 
 For LM Studio, start the local server in LM Studio, load a model, and set `LOCAL_LLM_MODEL` to the model identifier shown by the server. Ollama or llama.cpp can also be used if they expose an OpenAI-compatible `/v1` endpoint. In local mode, `/api/chat` sends the Skill prompt, recent session history, and the current user message to the local server. If the local server is not running or the model name is missing, `/api/chat` returns a clear error instead of crashing.
 
-## Voicebox mode (optional)
+## Voice and TTS roadmap
 
-`VOICE_MODE=mock` remains the default and returns `audio_url: null`. To generate real speech, start Voicebox locally and enable Voicebox mode intentionally:
+The current MVP is text-only. `VOICE_MODE=mock` remains the only active voice behavior and `/api/chat` returns `audio_url: null`. The Voice Profile selector is kept as a future-facing placeholder so the UI shape does not need to change when TTS is revisited.
 
-```bash
-export VOICE_MODE=voicebox
-export VOICEBOX_BASE_URL=http://127.0.0.1:17493
-cd backend
-uvicorn app.main:app --reload --port 8000
-```
+If `VOICE_MODE=voicebox` is set now, the backend returns a clear error explaining that Voicebox integration is deferred. It does not call Voicebox, does not use `/generate/stream`, and does not create audio files.
 
-Voicebox integration uses `POST /generate/stream`, not `/speak`, and saves returned WAV bytes to `audio_cache/`. The backend serves generated files from `/audio`, so `/api/chat` returns an `audio_url` such as `/audio/<filename>.wav`.
+Future roadmap items:
 
-To inspect available Voicebox profiles:
+- Voicebox / TTS integration using a supported streaming endpoint.
+- Audio playback in the frontend once real `audio_url` values are produced.
+- Preset/cloned profile and engine/language compatibility handling.
+- Audio cache retention and cleanup policy.
+- Live2D voice and motion synchronization.
 
-```bash
-curl http://127.0.0.1:17493/profiles
-```
-
-Create `config/voices.json` from `config/voices.example.json` and set each voice entry:
-
-```json
-{
-  "id": "example_voice",
-  "display_name": "Example Voice",
-  "voicebox_profile_id": "the-profile-id-from-voicebox",
-  "language": "zh",
-  "engine": "kokoro",
-  "linked_skill_id": "example_character"
-}
-```
-
-When `VOICE_MODE=voicebox`, the backend validates `voice_id`, resolves `voicebox_profile_id`, sends `profile_id`, assistant reply `text`, `language`, and optional `engine` to Voicebox, then returns the generated audio URL. If Voicebox is not running, the profile ID is missing, the response is not audio, or audio bytes are empty, `/api/chat` returns a clear HTTP error.
+`VOICEBOX_BASE_URL` may remain in `.env.example` as a future optional setting, but it is ignored while `VOICE_MODE=mock`.
 
 ## Frontend setup and run
 
@@ -244,7 +226,7 @@ npm run build
 - `CHAT_MODE=local` is opt-in and calls an OpenAI-compatible local server using `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, and `LOCAL_LLM_API_KEY`. Local server failures and empty responses are returned as clear HTTP errors.
 - `CHAT_MODE=openai` and `CHAT_MODE=local` include recent in-memory session history after the system Skill prompt.
 - `VOICE_MODE=mock` calls only `generate_mock_speech()`, which is a local placeholder and does not call a real Voicebox service.
-- `VOICE_MODE=voicebox` calls the configured Voicebox server with `/generate/stream`, saves WAV bytes to `audio_cache/`, and returns a playable `/audio/<filename>.wav` URL.
+- `VOICE_MODE=voicebox` is currently deferred and returns a clear error without making network calls.
 - `audio_url` may be `null` during testing; this is expected and the frontend handles it by hiding audio controls.
 - Invalid `skill_id` values return a clear `404` HTTP error.
 - Invalid `voice_id` values return a clear `404` HTTP error.
@@ -268,14 +250,14 @@ cd frontend && npm run build
 Current limitations:
 
 - Assistant replies are fixed mock text unless `CHAT_MODE=openai` or `CHAT_MODE=local` is explicitly enabled.
-- Speech generation is implemented only for opt-in `VOICE_MODE=voicebox`; mock mode returns no audio.
+- Speech generation is deferred; mock mode returns no audio.
 - `audio_url` is always `null` in mock mode.
 - Backend conversation history and long-term memory are in-memory only, grouped by `session_id`, and disappear on backend restart or the relevant reset/clear endpoint.
 - There is no authentication or database persistence.
 
 Recommended next steps after the testing stage:
 
-1. Add retention cleanup for generated `audio_cache/` files and harden Voicebox deployment settings before production use.
+1. Future: Voicebox / TTS integration.
 2. Use `CHAT_MODE=openai` only for intentional real text testing with `OPENAI_API_KEY` configured, or `CHAT_MODE=local` with an OpenAI-compatible local server.
-3. Add automated tests around Voicebox error handling and generated audio URL serving.
+3. Future: audio playback in the frontend, profile engine compatibility handling, and Live2D voice/motion synchronization.
 4. Add automated backend and frontend tests for the mock and mode-switching flows.
