@@ -1,10 +1,56 @@
 import json
+import uuid
 from pathlib import Path
 from typing import Optional
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 VOICES_CONFIG_PATH = PROJECT_ROOT / "config" / "voices.json"
+AUDIO_CACHE_DIR = PROJECT_ROOT / "audio_cache"
+
+
+class VoiceboxConfigurationError(RuntimeError):
+    """Raised when Voicebox mode is enabled without required voice settings."""
+
+
+class VoiceboxProviderError(RuntimeError):
+    """Raised when the Voicebox request fails or returns an invalid response."""
+
+
+class VoiceboxEmptyAudioError(RuntimeError):
+    """Raised when Voicebox returns no playable audio bytes."""
+
+
+class VoiceboxDeferredError(RuntimeError):
+    """Raised when a caller enables future Voicebox mode in the current text-only MVP."""
+
+
+class VoiceboxConfigurationError(RuntimeError):
+    """Reserved for future Voicebox configuration validation errors."""
+
+
+class VoiceboxProviderError(RuntimeError):
+    """Reserved for future Voicebox provider request errors."""
+
+
+class VoiceboxEmptyAudioError(RuntimeError):
+    """Reserved for future Voicebox empty-audio responses."""
+
+
+class VoiceboxDeferredError(RuntimeError):
+    """Raised when a caller enables future Voicebox mode in the current text-only MVP."""
+
+
+class VoiceboxConfigurationError(RuntimeError):
+    """Reserved for future Voicebox configuration validation errors."""
+
+
+class VoiceboxProviderError(RuntimeError):
+    """Reserved for future Voicebox provider request errors."""
+
+
+class VoiceboxEmptyAudioError(RuntimeError):
+    """Reserved for future Voicebox empty-audio responses."""
 
 
 class VoiceboxDeferredError(RuntimeError):

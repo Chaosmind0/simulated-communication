@@ -46,3 +46,6 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+#skills
+skills/imported/*
