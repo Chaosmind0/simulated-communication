@@ -8,6 +8,8 @@ class SkillInfo(BaseModel):
     description: str
     skill_path: str
     avatar: Optional[str] = None
+    ai_avatar_url: Optional[str] = None
+    user_avatar_url: Optional[str] = None
 
 
 class VoiceInfo(BaseModel):

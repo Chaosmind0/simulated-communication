@@ -28,6 +28,10 @@ build/
 audio_cache/*
 !audio_cache/.gitkeep
 
+# Uploaded Skill avatars
+skills/**/avatar_ai.*
+skills/**/avatar_user.*
+
 # Generated files
 generated_audio/
 outputs/

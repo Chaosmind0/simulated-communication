@@ -4,6 +4,8 @@ export type Skill = {
   description: string;
   skill_path: string;
   avatar?: string | null;
+  ai_avatar_url?: string | null;
+  user_avatar_url?: string | null;
 };
 
 export type Voice = {
@@ -38,4 +40,13 @@ export type ChatResponse = {
   audio_url: string | null;
   emotion: string;
   motion: string;
+};
+
+export type AvatarType = "ai" | "user";
+
+export type SkillAvatarResponse = {
+  status: "ok";
+  skill_id: string;
+  avatar_type: AvatarType;
+  avatar_url: string;
 };

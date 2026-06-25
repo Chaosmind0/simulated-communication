@@ -211,6 +211,18 @@ Imported Skill entries look like:
 
 Simple `name` and `description` front matter in `SKILL.md` is used when available; otherwise the display name is inferred from the folder name. Uploaded files are treated as text/data only and are never executed.
 
+
+## Per-Skill chat avatars
+
+Each Character Skill can have separate chat avatars for assistant and user messages:
+
+- AI / assistant avatar: `avatar_ai.png` (or another supported image extension such as `.jpg`, `.webp`, or `.gif`)
+- User avatar: `avatar_user.png` (or another supported image extension such as `.jpg`, `.webp`, or `.gif`)
+
+Click the AI icon on an assistant message or the user icon on a user message to upload or replace that Skill's avatar. Uploaded avatars are validated as image files, limited to 5 MB, saved inside the selected Skill folder, and served through safe API URLs such as `GET /api/skills/{skill_id}/avatar/ai` and `GET /api/skills/{skill_id}/avatar/user`. If no avatar exists, the chat keeps the fallback labels `AI` and `我`.
+
+Imported Skill folders may include `avatar_ai.png` and/or `avatar_user.png`; those files are preserved during import and shown automatically when the imported Skill is selected. Uploaded files are never executed.
+
 ## Frontend setup and run
 
 In a second terminal, from the repository root:

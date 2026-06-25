@@ -1,4 +1,4 @@
-import type { ChatRequest, ChatResponse, Skill, Voice } from "../types/chat";
+import type { AvatarType, ChatRequest, ChatResponse, Skill, SkillAvatarResponse, Voice } from "../types/chat";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
 
@@ -57,4 +57,17 @@ export async function importSkillFolder(files: File[], displayName?: string): Pr
   });
 
   return readJson<Skill>(res);
+}
+
+export async function uploadSkillAvatar(skillId: string, avatarType: AvatarType, file: File): Promise<SkillAvatarResponse> {
+  const formData = new FormData();
+  formData.append("avatar_type", avatarType);
+  formData.append("file", file, file.name);
+
+  const res = await fetch(`${API_BASE_URL}/skills/${encodeURIComponent(skillId)}/avatar`, {
+    method: "POST",
+    body: formData,
+  });
+
+  return readJson<SkillAvatarResponse>(res);
 }

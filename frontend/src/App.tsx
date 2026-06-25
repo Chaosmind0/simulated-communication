@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { getSkills, importSkillFolder, sendChatMessage } from "./api/client";
+import { getSkills, importSkillFolder, sendChatMessage, uploadSkillAvatar } from "./api/client";
 import { ChatInput } from "./components/ChatInput";
 import { ChatWindow } from "./components/ChatWindow";
 import { SkillImport } from "./components/SkillImport";
 import { SkillSelector } from "./components/SkillSelector";
-import type { ChatMessage, Skill } from "./types/chat";
+import type { AvatarType, ChatMessage, Skill } from "./types/chat";
 
 function createMessageId() {
   return `${Date.now()}-${crypto.randomUUID()}`;
@@ -20,6 +20,7 @@ function App() {
 
   const baseSessionId = useMemo(() => crypto.randomUUID(), []);
   const selectedMessages = selectedSkillId ? messagesBySkillId[selectedSkillId] ?? [] : [];
+  const selectedSkill = skills.find((skill) => skill.id === selectedSkillId) ?? null;
 
   function getSkillSessionId(skillId: string) {
     return `${baseSessionId}:${skillId}`;
@@ -83,6 +84,35 @@ function App() {
     setError(null);
     const importedSkill = await importSkillFolder(files);
     await refreshSkills(importedSkill.id);
+  }
+
+  async function handleAvatarUpload(avatarType: AvatarType, file: File) {
+    if (!selectedSkillId) {
+      setError("Please select a character Skill before uploading an avatar.");
+      return;
+    }
+
+    try {
+      setError(null);
+      const response = await uploadSkillAvatar(selectedSkillId, avatarType, file);
+      const cacheBustedAvatarUrl = `${response.avatar_url}?v=${Date.now()}`;
+
+      setSkills((currentSkills) =>
+        currentSkills.map((skill) => {
+          if (skill.id !== selectedSkillId) {
+            return skill;
+          }
+
+          return {
+            ...skill,
+            ai_avatar_url: avatarType === "ai" ? cacheBustedAvatarUrl : skill.ai_avatar_url,
+            user_avatar_url: avatarType === "user" ? cacheBustedAvatarUrl : skill.user_avatar_url,
+          };
+        }),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload avatar.");
+    }
   }
 
   async function handleSend(messageText: string) {
@@ -151,7 +181,13 @@ function App() {
       {error ? <div className="status-banner status-banner-error">{error}</div> : null}
 
       <section className="chat-card">
-        <ChatWindow messages={selectedMessages} isSending={isSending} />
+        <ChatWindow
+          aiAvatarUrl={selectedSkill?.ai_avatar_url ?? null}
+          userAvatarUrl={selectedSkill?.user_avatar_url ?? null}
+          messages={selectedMessages}
+          isSending={isSending}
+          onAvatarUpload={handleAvatarUpload}
+        />
         <ChatInput disabled={chatDisabled} onSend={handleSend} />
       </section>
     </main>

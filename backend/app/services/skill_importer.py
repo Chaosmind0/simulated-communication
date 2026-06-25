@@ -13,10 +13,13 @@ from app.services.skill_loader import PROJECT_ROOT, SKILLS_CONFIG_PATH, load_ski
 class UploadedSkillFile:
     filename: str
     content: bytes
+    content_type: str | None = None
 
 
 IMPORTED_SKILLS_DIR = PROJECT_ROOT / "skills" / "imported"
 REQUIRED_SKILL_FILES = {"SKILL.md", "persona.md", "knowledge.md"}
+OPTIONAL_AVATAR_STEMS = {"avatar_ai", "avatar_user"}
+OPTIONAL_AVATAR_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 MAX_FILE_BYTES = 1_000_000
 MAX_TOTAL_BYTES = 5_000_000
 
@@ -79,6 +82,12 @@ def _parse_front_matter(skill_md: str) -> tuple[Optional[str], Optional[str]]:
     return name, description
 
 
+def _is_supported_avatar_path(path: PurePosixPath) -> bool:
+    suffix = PurePosixPath(path.name).suffix.lower()
+    stem = PurePosixPath(path.name).stem
+    return stem in OPTIONAL_AVATAR_STEMS and suffix in OPTIONAL_AVATAR_EXTENSIONS
+
+
 def _unique_skill_id(base_skill_id: str, existing_ids: set[str]) -> str:
     candidate = base_skill_id
     suffix = 2
@@ -104,7 +113,7 @@ async def import_skill_folder(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"Uploaded file is too large: {original_path}",
             )
-        if b"\x00" in content:
+        if b"\x00" in content and not _is_supported_avatar_path(original_path):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unsupported binary file: {original_path}",

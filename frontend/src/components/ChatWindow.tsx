@@ -1,12 +1,15 @@
-import type { ChatMessage } from "../types/chat";
+import type { AvatarType, ChatMessage } from "../types/chat";
 import { MessageBubble } from "./MessageBubble";
 
 type ChatWindowProps = {
+  aiAvatarUrl?: string | null;
+  userAvatarUrl?: string | null;
   messages: ChatMessage[];
   isSending: boolean;
+  onAvatarUpload: (avatarType: AvatarType, file: File) => Promise<void>;
 };
 
-export function ChatWindow({ messages, isSending }: ChatWindowProps) {
+export function ChatWindow({ aiAvatarUrl, userAvatarUrl, messages, isSending, onAvatarUpload }: ChatWindowProps) {
   return (
     <section className="chat-window" aria-live="polite">
       {messages.length === 0 ? (
@@ -15,7 +18,15 @@ export function ChatWindow({ messages, isSending }: ChatWindowProps) {
           <span>Select a Character Skill, then send a message.</span>
         </div>
       ) : (
-        messages.map((message) => <MessageBubble key={message.id} message={message} />)
+        messages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            aiAvatarUrl={aiAvatarUrl}
+            userAvatarUrl={userAvatarUrl}
+            message={message}
+            onAvatarUpload={onAvatarUpload}
+          />
+        ))
       )}
       {isSending ? <div className="typing-indicator">Assistant is preparing a mock reply…</div> : null}
     </section>
