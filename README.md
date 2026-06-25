@@ -212,6 +212,29 @@ Imported Skill entries look like:
 Simple `name` and `description` front matter in `SKILL.md` is used when available; otherwise the display name is inferred from the folder name. Uploaded files are treated as text/data only and are never executed.
 
 
+
+## Persistent chat history and memory
+
+The backend initializes a local SQLite database at `data/app.db` on startup. This file is local-only and is ignored by git through the existing `*.db` rule.
+
+SQLite stores:
+
+- `conversations`: Skill-scoped browser/backend conversation sessions.
+- `messages`: every persisted user and assistant chat message.
+- `memories`: long-term memory records, including category, confidence, disabled state, and optional Skill scope.
+
+The frontend uses stable Skill-scoped session IDs such as `web-session:<skill_id>`, so closing and reopening the browser can reload the same selected Skill history through `GET /api/chat/history?skill_id=<skill_id>&session_id=web-session:<skill_id>`. Switching Skills loads only that Skill's stored messages.
+
+Useful persistence endpoints:
+
+- `GET /api/chat/history?skill_id=<skill_id>` loads stored messages for a Skill.
+- `POST /api/chat/reset` clears a session, or one Skill session when `skill_id` is included in the payload.
+- `GET /api/memory?skill_id=<skill_id>` lists stored memories for development inspection.
+- `DELETE /api/memory/{memory_id}` deletes one memory record.
+- `POST /api/memory/clear` clears memories for a session and/or Skill scope.
+
+To fully reset local persistence during development, stop the backend and delete `data/app.db`; it will be recreated on the next backend startup. Do not store API keys, tokens, or secrets in chat messages or memory.
+
 ## Per-Skill chat avatars
 
 Each Character Skill can have separate chat avatars for assistant and user messages:

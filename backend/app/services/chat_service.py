@@ -15,6 +15,7 @@ from app.services.conversation_store import (
     MAX_HISTORY_MESSAGES,
     append_exchange,
     clear_session,
+    get_history_for_skill,
     get_message_count,
     get_recent_messages,
 )
@@ -142,13 +143,13 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
         if memory_prompt:
             skill_prompt = f"{skill_prompt}\n\n{memory_prompt}"
 
-    history_messages = get_recent_messages(request.session_id)
+    history_messages = get_recent_messages(request.session_id, request.skill_id)
     reply_text = await _generate_reply_text(
         settings.chat_mode, skill_prompt, request.message, history_messages
     )
     audio_url = await _generate_audio_url(settings.voice_mode, reply_text, request.voice_id)
 
-    append_exchange(request.session_id, request.message, reply_text)
+    append_exchange(request.session_id, request.skill_id, request.message, reply_text)
     maybe_store_memory(request.session_id, request.skill_id, request.message)
 
     return ChatResponse(
@@ -159,13 +160,24 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
     )
 
 
-def reset_chat_history(session_id: str) -> None:
-    clear_session(session_id)
+def reset_chat_history(session_id: str, skill_id: str | None = None) -> None:
+    clear_session(session_id, skill_id)
 
 
-def get_chat_session_status(session_id: str) -> dict:
+def get_chat_session_status(session_id: str, skill_id: str | None = None) -> dict:
     return {
         "session_id": session_id,
-        "message_count": get_message_count(session_id),
+        "message_count": get_message_count(session_id, skill_id),
         "max_history_messages": MAX_HISTORY_MESSAGES,
     }
+
+
+def get_chat_history(skill_id: str, session_id: str | None = None) -> list[dict]:
+    try:
+        find_skill(skill_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Skill not found: {skill_id}",
+        ) from exc
+    return get_history_for_skill(skill_id, session_id)

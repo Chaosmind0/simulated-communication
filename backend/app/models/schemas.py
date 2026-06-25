@@ -37,6 +37,7 @@ class ChatResponse(BaseModel):
 
 class ChatResetRequest(BaseModel):
     session_id: str
+    skill_id: Optional[str] = None
 
 
 class ChatResetResponse(BaseModel):
@@ -51,8 +52,17 @@ class ChatSessionStatusResponse(BaseModel):
     max_history_messages: int
 
 
-class MemoryClearRequest(BaseModel):
+class ChatHistoryMessage(BaseModel):
+    id: str
+    role: str
+    text: str
+    created_at: str
     session_id: str
+    skill_id: str
+
+
+class MemoryClearRequest(BaseModel):
+    session_id: Optional[str] = None
     skill_id: Optional[str] = None
 
 

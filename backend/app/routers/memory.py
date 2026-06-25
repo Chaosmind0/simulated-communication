@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.models.schemas import MemoryActionResponse, MemoryClearRequest
 from app.services.memory_service import clear_memories, delete_memory, disable_memory, list_memories
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/memory")
 def get_memories(
-    session_id: str = Query(...), skill_id: Optional[str] = None, include_disabled: bool = False
+    session_id: Optional[str] = None, skill_id: Optional[str] = None, include_disabled: bool = False
 ):
     return {
         "session_id": session_id,

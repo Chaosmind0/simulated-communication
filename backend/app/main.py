@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.routers import skills, voices, chat, memory
+from app.services.database import init_database
 
 app = FastAPI(title="Simulated Communication API")
 
@@ -18,6 +19,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def startup() -> None:
+    init_database()
 
 
 @app.get("/api/health")

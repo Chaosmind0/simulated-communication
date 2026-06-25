@@ -1,4 +1,12 @@
-import type { AvatarType, ChatRequest, ChatResponse, Skill, SkillAvatarResponse, Voice } from "../types/chat";
+import type {
+  AvatarType,
+  ChatHistoryMessage,
+  ChatRequest,
+  ChatResponse,
+  Skill,
+  SkillAvatarResponse,
+  Voice,
+} from "../types/chat";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
 
@@ -40,6 +48,15 @@ export async function sendChatMessage(payload: ChatRequest): Promise<ChatRespons
   });
 
   return readJson<ChatResponse>(res);
+}
+
+export async function getChatHistory(skillId: string, sessionId?: string): Promise<ChatHistoryMessage[]> {
+  const params = new URLSearchParams({ skill_id: skillId });
+  if (sessionId) {
+    params.set("session_id", sessionId);
+  }
+  const res = await fetch(`${API_BASE_URL}/chat/history?${params.toString()}`);
+  return readJson<ChatHistoryMessage[]>(res);
 }
 
 export async function importSkillFolder(files: File[], displayName?: string): Promise<Skill> {

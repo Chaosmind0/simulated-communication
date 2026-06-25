@@ -42,6 +42,15 @@ export type ChatResponse = {
   motion: string;
 };
 
+export type ChatHistoryMessage = {
+  id: string;
+  role: ChatRole;
+  text: string;
+  created_at: string;
+  session_id: string;
+  skill_id: string;
+};
+
 export type AvatarType = "ai" | "user";
 
 export type SkillAvatarResponse = {

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { getSkills, importSkillFolder, sendChatMessage, uploadSkillAvatar } from "./api/client";
+import { useEffect, useState } from "react";
+import { getChatHistory, getSkills, importSkillFolder, sendChatMessage, uploadSkillAvatar } from "./api/client";
 import { ChatInput } from "./components/ChatInput";
 import { ChatWindow } from "./components/ChatWindow";
 import { SkillImport } from "./components/SkillImport";
 import { SkillSelector } from "./components/SkillSelector";
-import type { AvatarType, ChatMessage, Skill } from "./types/chat";
+import type { AvatarType, ChatHistoryMessage, ChatMessage, Skill } from "./types/chat";
 
 function createMessageId() {
   return `${Date.now()}-${crypto.randomUUID()}`;
@@ -18,12 +18,11 @@ function App() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const baseSessionId = useMemo(() => crypto.randomUUID(), []);
   const selectedMessages = selectedSkillId ? messagesBySkillId[selectedSkillId] ?? [] : [];
   const selectedSkill = skills.find((skill) => skill.id === selectedSkillId) ?? null;
 
   function getSkillSessionId(skillId: string) {
-    return `${baseSessionId}:${skillId}`;
+    return `web-session:${skillId}`;
   }
 
   function appendSkillMessage(skillId: string, message: ChatMessage) {
@@ -79,6 +78,39 @@ function App() {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadSkillHistory() {
+      if (!selectedSkillId) {
+        return;
+      }
+
+      try {
+        setError(null);
+        const history = await getChatHistory(selectedSkillId, getSkillSessionId(selectedSkillId));
+        if (ignore) {
+          return;
+        }
+
+        setMessagesBySkillId((currentMessagesBySkillId) => ({
+          ...currentMessagesBySkillId,
+          [selectedSkillId]: history.map(historyMessageToChatMessage),
+        }));
+      } catch (err) {
+        if (!ignore) {
+          setError(err instanceof Error ? err.message : "Failed to load chat history.");
+        }
+      }
+    }
+
+    loadSkillHistory();
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedSkillId]);
 
   async function handleImportSkill(files: File[]) {
     setError(null);
@@ -195,3 +227,11 @@ function App() {
 }
 
 export default App;
+
+function historyMessageToChatMessage(message: ChatHistoryMessage): ChatMessage {
+  return {
+    id: `history-${message.id}`,
+    role: message.role,
+    text: message.text,
+  };
+}
